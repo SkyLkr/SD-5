@@ -1,2 +1,2 @@
-# SD-5
-Sistemas Distribuídos - Balanceamento de Carga
+# Trabalho 5 de Sistemas Distribuídos
+Balanceamento de Carga Dinâmico
