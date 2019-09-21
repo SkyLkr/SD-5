@@ -13,8 +13,9 @@ public class Main {
 			String json = in.nextLine();
 			
 			System.out.println(json);
+			
+			in.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
