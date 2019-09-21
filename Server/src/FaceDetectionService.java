@@ -1,5 +1,4 @@
 import java.lang.management.ManagementFactory;
-import java.lang.management.OperatingSystemMXBean;
 
 import javax.management.Attribute;
 import javax.management.AttributeList;
