@@ -8,6 +8,8 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 
+import org.json.JSONObject;
+
 @Path("/")
 public class FaceDetectionService {
 	@GET
@@ -21,7 +23,10 @@ public class FaceDetectionService {
 			e.printStackTrace();
 		}
 		
-		return String.format("{ cpu_load: %f }", load);
+		JSONObject json = new JSONObject();
+		json.put("cpu_load", load);
+		
+		return json.toString();
 	}
 	
 	private double getCpuLoad() throws Exception {
