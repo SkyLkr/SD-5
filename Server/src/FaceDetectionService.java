@@ -1,3 +1,5 @@
+import java.awt.Color;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -6,6 +8,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.management.ManagementFactory;
 
+import javax.imageio.ImageIO;
 import javax.management.Attribute;
 import javax.management.AttributeList;
 import javax.management.MBeanServer;
@@ -46,10 +49,29 @@ public class FaceDetectionService {
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	public String sendImage(
 		@FormParam("file") InputStream uploadedInputStream,
-		@FormParam("file") FormDataContentDisposition fileDetail) {
+		@FormParam("file") FormDataContentDisposition fileDetail) throws IOException {
 		
-		saveImgToDisk(uploadedInputStream, fileDetail);
-		
+		String Location = saveImgToDisk(uploadedInputStream, fileDetail);
+		BufferedImage imagem = ImageIO.read(new File(Location));
+        
+        int newimage[][][] = new int[3][imagem.getHeight()][imagem.getWidth()];
+        double c = 10;
+        
+        for(int i = 0; i<imagem.getHeight()-1;i++) {
+        	for (int j = 0;j<imagem.getWidth()-1;j++) {
+        		Color color = new Color(imagem.getRGB(j, i));
+                int red = (int) (color.getRed()*0.299);
+        		int blue = (int) (color.getBlue()*0.587);
+        		int green = (int) (color.getGreen()*0.114);
+                
+                int newRGB = (int) (c*Math.log(red+1)) + (int)(c*Math.log(blue+1))+ (int)(c*Math.log(green+1));
+                Color gray = new Color (newRGB,newRGB,newRGB);
+                imagem.setRGB(j,i,gray.getRGB());
+
+            }
+                
+        }
+
 		return "Success!";
 	}
 	
@@ -70,7 +92,7 @@ public class FaceDetectionService {
 	    return ((int)(value * 1000) / 10.0);
 	}
 	
-	private void saveImgToDisk(InputStream uploadedInputStream, FormDataContentDisposition fileDetail) {
+	private String saveImgToDisk(InputStream uploadedInputStream, FormDataContentDisposition fileDetail) {
 		String uploadedFileLocation = System.getProperty("user.dir") + File.separator + fileDetail.getFileName();
 		
 		try {
@@ -88,6 +110,6 @@ public class FaceDetectionService {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+		return uploadedFileLocation;
 	}
 }
