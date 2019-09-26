@@ -11,7 +11,7 @@ public class RestServer implements Comparable<RestServer> {
 	private double cpuUsage;
 	
 	public RestServer(String ip) throws IOException {
-		this.address = "http://" + ip + ":8080/Server/facerec/";
+		this.address = "http://" + ip + ":8080/Server/facedetect/";
 		
 		URL url = new URL(this.address);
 		

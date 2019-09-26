@@ -3,7 +3,10 @@ package com.apm.sd5android;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 
+import android.Manifest;
+import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -16,14 +19,17 @@ import android.widget.Button;
 import android.widget.ImageView;
 
 import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
-    Uri file;
     private ImageView imageView;
     private Button button;
+
+    private static final int REQUEST_CAPTURE_IMAGE = 1;
 
 
     @Override
@@ -33,50 +39,47 @@ public class MainActivity extends AppCompatActivity {
 
         imageView = findViewById(R.id.imageView);
         button = findViewById(R.id.button2);
-
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            button.setEnabled(false);
-            ActivityCompat.requestPermissions(this, new String[]{ Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE }, 0);
-        }
-
-        button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                File f = getOutputMediaFile();
-                file = Uri.fromFile(f);
-                Log.d("Image", file.toString());
-
-                intent.putExtra(MediaStore.EXTRA_OUTPUT, file);
-
-                startActivityForResult(intent, 100);
-            }
-        });
     }
 
-    private File getOutputMediaFile() {
-        File mediastorageDir = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES), "CameraDemo");
+    public void openCameraIntent(View view) {
+        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 
-        if (!mediastorageDir.exists()) {
-            if (!mediastorageDir.mkdirs()) {
-                Log.d("CameraDemo", "failed to create directory");
-                return null;
+        if (intent.resolveActivity(getPackageManager()) != null) {
+            File photoFile = null;
+            try {
+                photoFile = createImageFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            if (photoFile != null) {
+                Uri photoUri = FileProvider.getUriForFile(this, "com.apm.sd5android.provider", photoFile);
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+                startActivityForResult(intent, REQUEST_CAPTURE_IMAGE);
             }
         }
+    }
 
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format((new Date()));
-        return new File(mediastorageDir.getPath()+File.separator + "IMG_"
-                +timeStamp + ".jpg");
+    String imageFilePath;
+    private File createImageFile() throws IOException {
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+        String fileName = "IMG_" + timeStamp + "_";
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File image = File.createTempFile(fileName, ".jpg", storageDir);
+
+        imageFilePath = image.getAbsolutePath();
+        return image;
     }
 
     @Override
     protected  void onActivityResult(int requestCode, int resultCode, Intent data){
-        if (requestCode == 100){
-            if (resultCode == RESULT_OK){
-                imageView.setImageURI((file));
+        if (requestCode == REQUEST_CAPTURE_IMAGE && resultCode == Activity.RESULT_OK){
 
-            }
+            File f = new File(imageFilePath);
+
+            imageView.setImageURI(Uri.fromFile(f));
+
+            Connection.sendImageToServer(f, this);
         }
     }
 }

@@ -17,13 +17,18 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.json.JSONObject;
 
 import com.sun.jersey.core.header.FormDataContentDisposition;
+import com.sun.jersey.multipart.FormDataParam;
 
-@Path("/")
+@Path("facedetect")
 public class FaceDetectionService {
+	
+	private static final String UPLOAD_FOLDER = System.getProperty("user.home") + File.separator + "REST_IMG";
+	
 	@GET
 	@Produces("application/json")
 	public String testConnection() {
@@ -44,13 +49,17 @@ public class FaceDetectionService {
 	@POST
 	@Path("/sendImg")
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
-	public String sendImage(
-		@FormParam("file") InputStream uploadedInputStream,
-		@FormParam("file") FormDataContentDisposition fileDetail) {
+	public Response sendImage(
+		@FormDataParam("file") InputStream uploadedInputStream,
+		@FormDataParam("file") FormDataContentDisposition fileDetail) {
+		
+		if (uploadedInputStream == null || fileDetail == null) {
+			return Response.status(400).entity("Invalid form data").build();
+		}
 		
 		saveImgToDisk(uploadedInputStream, fileDetail);
 		
-		return "Success!";
+		return Response.status(200).entity("File saved to " + UPLOAD_FOLDER).build();
 	}
 	
 	private double getCpuLoad() throws Exception {
@@ -71,7 +80,12 @@ public class FaceDetectionService {
 	}
 	
 	private void saveImgToDisk(InputStream uploadedInputStream, FormDataContentDisposition fileDetail) {
-		String uploadedFileLocation = System.getProperty("user.dir") + File.separator + fileDetail.getFileName();
+		String uploadedFileLocation = UPLOAD_FOLDER + File.separator + fileDetail.getFileName();
+		
+		File saveDir = new File(UPLOAD_FOLDER);
+		if (!saveDir.exists()) {
+			saveDir.mkdirs();
+		}
 		
 		try {
 			OutputStream out = new FileOutputStream(new File(uploadedFileLocation));
