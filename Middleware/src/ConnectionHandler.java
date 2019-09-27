@@ -1,3 +1,5 @@
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -5,12 +7,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.Socket;
-import java.sql.Date;
-import java.text.SimpleDateFormat;
+import java.net.SocketException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Scanner;
 
 import org.apache.http.HttpEntity;
@@ -23,6 +26,8 @@ import org.apache.http.params.BasicHttpParams;
 import org.apache.http.util.EntityUtils;
 
 public class ConnectionHandler implements Runnable {
+	
+	private final int PACK_SIZE = 8*1024;
 	
 	private Socket client;
 	private List<RestServer> serverList;
@@ -38,7 +43,8 @@ public class ConnectionHandler implements Runnable {
 			RestServer rest = new RestServer("localhost");
 			
 			// Getting file from client
-			InputStream in = client.getInputStream();
+			InputStream in = new BufferedInputStream(client.getInputStream());
+			OutputStream out = new BufferedOutputStream(client.getOutputStream());
 			
 			File saveDir = new File(System.getProperty("user.dir") + File.separator + "images");
 			
@@ -46,21 +52,31 @@ public class ConnectionHandler implements Runnable {
 			
 			File f = File.createTempFile("INPUT", ".jpg", saveDir);
 			
-			FileOutputStream out = new FileOutputStream(f);
+			FileOutputStream fileOut = new FileOutputStream(f);
 			
-			byte[] bytes = new byte[1024];
+			byte[] bytes = new byte[PACK_SIZE];
 			
-			System.out.print("Recebendo arquivo.");
 			
-			int count;
-			while((count = in.read(bytes)) > 0) {
-				out.write(bytes, 0, count);
+			int read;
+			
+//			int numLoops = in.read();
+//			System.out.println("Number of packages "+ numLoops);
+//			
+//			System.out.print("Recebendo arquivo.");
+//			for (int i = 0; i < numLoops; i++) {
+//				read = in.read(bytes);
+//				fileOut.write(bytes, 0, read);
+//				System.out.print(".");
+//			}
+//			fileOut.flush();
+			
+			while ((read = in.read(bytes)) > 0) {
+				fileOut.write(bytes, 0, read);
 				System.out.print(".");
 			}
 			System.out.print("\n");
 			
-			out.close();
-			in.close();
+			fileOut.close();
 			
 			System.out.println("Image saved as " + f.getAbsolutePath());
 			
@@ -83,13 +99,58 @@ public class ConnectionHandler implements Runnable {
 				HttpEntity responseEntity = response.getEntity();
 				String responseString = EntityUtils.toString(responseEntity, "UTF-8");
 				
-				System.out.println("[" + statusCode + "]" + responseString);
+				if (statusCode == 200) {
+					
+					System.out.println("[" + statusCode + "]" + responseString);
+					
+					URL urlObj = new URL(rest.getAddress() + "getImg/" + responseString);
+					
+					InputStream is = new BufferedInputStream(urlObj.openStream());
+					
+					File resDir = new File(System.getProperty("user.dir") + File.separator + "result_imgs");
+					resDir.mkdirs();
+					
+					File tf = File.createTempFile("TEMP", ".jpg", resDir);
+					
+					BufferedOutputStream bout = new BufferedOutputStream(new FileOutputStream(tf));
+					
+					read = 0;
+					while ((read = is.read(bytes)) > 0) {
+						bout.write(bytes, 0, read);
+					}
+					bout.close();
+					is.close();
+										
+					BufferedInputStream bin = new BufferedInputStream(new FileInputStream(tf));
+//					
+//					numLoops = 1 + (int) (tf.length() / PACK_SIZE);
+//					System.out.println(tf.length() + "/" + PACK_SIZE + " = " + (1+ (int)tf.length()/PACK_SIZE));
+//					
+//					out.write(numLoops);
+//					
+//					for (int i = 0; i < numLoops; i++) {
+//						read = bin.read(bytes);
+//						out.write(bytes, 0, read);
+//					}
+//					out.flush();
+					
+					while ((read = bin.read(bytes)) > 0) {
+						out.write(bytes, 0, read);
+					}
+					
+//					bin.read(bytes);
+//					out.write(bytes, 0, (int)tf.length());
+					
+					bin.close();
+					out.close();
+					in.close();
+					
+					System.out.println("Finished.");
+				} else {
+					System.out.println("[" + statusCode + "]" + responseString);
+				}
 			} catch(Exception e) {
 				e.printStackTrace();
-			} finally {
-				if (fis != null) {
-					fis.close();
-				}
 			}
 			
 		} catch (IOException e) {
@@ -97,5 +158,4 @@ public class ConnectionHandler implements Runnable {
 			e.printStackTrace();
 		}
 	}
-
 }

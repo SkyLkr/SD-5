@@ -79,7 +79,9 @@ public class MainActivity extends AppCompatActivity {
 
             imageView.setImageURI(Uri.fromFile(f));
 
-            Connection.sendImageToServer(f, this);
+            File result = Connection.sendImageToServer(f, getExternalFilesDir(Environment.DIRECTORY_PICTURES));
+
+            if (result != null) imageView.setImageURI(Uri.fromFile(result));
         }
     }
 }
